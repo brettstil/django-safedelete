@@ -40,6 +40,11 @@ class SafeDeleteModel(models.Model):
         DateTimeField set to the moment the object was deleted. Is set to
         ``None`` if the object has not been deleted.
 
+    :attribute not_deleted:
+        NullBooleanField to allow ``unique_together`` constraints on
+        not_deleted objects only. Defaults to ``True``. Set to ``None`` when
+        object deleted.
+
     :attribute _safedelete_policy: define what happens when you delete an object.
         It can be one of ``HARD_DELETE``, ``SOFT_DELETE``, ``SOFT_DELETE_CASCADE``, ``NO_DELETE`` and ``HARD_DELETE_NOCASCADE``.
         Defaults to ``SOFT_DELETE``.
@@ -63,6 +68,7 @@ class SafeDeleteModel(models.Model):
     _safedelete_policy = SOFT_DELETE
 
     deleted = models.DateTimeField(editable=False, null=True)
+    not_deleted = models.NullBooleanField(editable=False, default=True)
 
     objects = SafeDeleteManager()
     all_objects = SafeDeleteAllManager()
@@ -93,6 +99,7 @@ class SafeDeleteModel(models.Model):
             if self.deleted and self.pk:
                 was_undeleted = True
             self.deleted = None
+            self.not_deleted = True
 
         super(SafeDeleteModel, self).save(**kwargs)
 
@@ -131,6 +138,7 @@ class SafeDeleteModel(models.Model):
 
             # Only soft-delete the object, marking it as deleted.
             self.deleted = timezone.now()
+            self.not_deleted = None
             using = kwargs.get('using') or router.db_for_write(self.__class__, instance=self)
             # send pre_softdelete signal
             pre_softdelete.send(sender=self.__class__, instance=self, using=using)
